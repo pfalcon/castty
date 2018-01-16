@@ -28,6 +28,9 @@ var player = function(audioFile, containerElem, events) {
 	var init = function(audioFile, containerElem, events) {
 		Player.container = containerElem;
 
+		$('<div id="annot" style="border: 2px solid red; border-radius: 6px; background-color: white; padding: 3px; visibility: hidden; position: absolute;"></div>')
+		    .appendTo(Player.container);
+
 		Player.termContainer = $('<div id="term"></div>')
 		    .appendTo(Player.container);
 
@@ -62,6 +65,11 @@ var player = function(audioFile, containerElem, events) {
 		Player.eventOff = 0;
 		Player.rem = 0;
 		Player.timerHandle = undefined;
+		Player.annotations = [];
+		if (events.annotations !== undefined) {
+			Player.annotations = events.annotations;
+		}
+		Player.annOff = 0;
 
 		Player.playTime = 0;
 
@@ -73,6 +81,7 @@ var player = function(audioFile, containerElem, events) {
 				Player.term.clear();
 				Player.term.reset();
 				Player.pos = 0;
+				Player.annOff = 0;
 			}
 
 			var i = back ? 0 : Player.eventOff;
@@ -81,6 +90,9 @@ var player = function(audioFile, containerElem, events) {
 			    Player.pos + Player.termEvents[i][0] <= (t / 1000)) {
 				str += Player.termEvents[i][1];
 				Player.pos += Player.termEvents[i++][0];
+				if (Player.annOff < Player.annotations.length && Player.pos >= Player.annotations[Player.annOff].at) {
+					Player.annOff++;
+				}
 			}
 
 			i = i == Player.termEvents.length ? i - 1 : i;
@@ -108,6 +120,21 @@ var player = function(audioFile, containerElem, events) {
 			} else {
 				str = Player.termEvents[Player.eventOff][1];
 				Player.pos += Player.termEvents[Player.eventOff++][0];
+				if (Player.annOff < Player.annotations.length && Player.pos >= Player.annotations[Player.annOff].at) {
+				    var ann = Player.annotations[Player.annOff++];
+				    var off = $("#term").offset();
+				    var w = $("#term").width();
+				    var h = $("#term").height();
+				    $("#annot").css({
+					position: "absolute",
+					left: off.left + w * ann.relx,
+					top: off.top + h * ann.rely,
+					"z-index": 10000,
+					visibility: "visible"
+				    });
+				    $("#annot").html(ann.text.replace("\n", "<br/>"));
+				    setTimeout(function() { $("#annot").css("visibility", "hidden"); }, ann.dur * 1000);
+				}
 			}
 
 			Player.term.write(str);
